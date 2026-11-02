@@ -12,8 +12,8 @@ import {
   clearCart,
   getCart,
   getView,
+  getUnavailableCartItems,
   removeFromCart,
-  reconcileCart,
   saveOrder,
   setView,
 } from './modules/cart/cart.state.ts'
@@ -75,7 +75,22 @@ const ui = createUi({
     if (clearCart()) render()
   },
   checkout() {
-    const items = getCartDetails(getCart(), catalog)
+    const savedCart = getCart()
+    if (!hasAvailableCatalog()) {
+      ui.showErrors(
+        {},
+        'Products are currently unavailable. Your saved cart is safe; try again when the catalog returns.',
+      )
+      return
+    }
+    if (getUnavailableCartItems(catalog).length) {
+      ui.showErrors(
+        {},
+        'Some saved items are no longer available. Remove them before checkout.',
+      )
+      return
+    }
+    const items = getCartDetails(savedCart, catalog)
     if (items.length) ui.showCheckout(items, getTotal(items))
   },
   placeOrder(customer: Customer) {
@@ -85,6 +100,20 @@ const ui = createUi({
       ui.showErrors(
         errors,
         'Please correct the highlighted fields before placing your demo order.',
+      )
+      return
+    }
+    if (!hasAvailableCatalog()) {
+      ui.showErrors(
+        {},
+        'Products are currently unavailable. Your saved cart is safe; try again when the catalog returns.',
+      )
+      return
+    }
+    if (getUnavailableCartItems(catalog).length) {
+      ui.showErrors(
+        {},
+        'Some saved items are no longer available. Remove them before checkout.',
       )
       return
     }
@@ -128,7 +157,12 @@ const ui = createUi({
 })
 
 function render() {
-  const cart = getCartDetails(getCart(), catalog)
+  const savedCart = getCart()
+  const catalogAvailable = hasAvailableCatalog()
+  const unavailableCartItems = catalogAvailable
+    ? getUnavailableCartItems(catalog)
+    : savedCart
+  const cart = catalogAvailable ? getCartDetails(savedCart, catalog) : []
   const visibleProducts =
     loadState.status === 'success'
       ? getVisibleProducts(loadState.products, getView())
@@ -137,9 +171,15 @@ function render() {
     loadState,
     visibleProducts,
     cart,
+    unavailableCartItems,
+    catalogAvailable,
     view: getView(),
     total: getTotal(cart),
   })
+}
+
+function hasAvailableCatalog(): boolean {
+  return loadState.status === 'success' && loadState.products.length > 0
 }
 
 const productsLoader = createProductsLoader(getProducts, {
@@ -147,7 +187,6 @@ const productsLoader = createProductsLoader(getProducts, {
     loadState = nextLoadState
     if (nextLoadState.status === 'success') {
       catalog = nextLoadState.products
-      reconcileCart(catalog)
     }
     render()
   },

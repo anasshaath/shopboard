@@ -1,4 +1,4 @@
-import type { CartDetail } from './modules/cart/cart.types.ts'
+import type { CartDetail, CartItem } from './modules/cart/cart.types.ts'
 import type { Order } from './modules/cart/cart.state.ts'
 import type {
   Customer,
@@ -34,6 +34,8 @@ interface RenderData {
   loadState: LoadState
   visibleProducts: Product[]
   cart: CartDetail[]
+  unavailableCartItems: CartItem[]
+  catalogAvailable: boolean
   view: ProductView
   total: number
 }
@@ -106,10 +108,30 @@ export function createUi(actions: UiActions) {
     card.tabIndex = 0
     card.dataset.productId = String(product.id)
     card.append(createArtwork(product.id))
-    card.insertAdjacentHTML(
-      'beforeend',
-      `<div class="product-info"><div><p class="category">${product.category}</p><h3>${product.name}</h3></div><p class="price">${currency.format(product.price)}</p></div><button class="add-to-cart" type="button" data-add-to-cart="${product.id}">Add to cart</button><button class="view-details" type="button" data-view-details="${product.id}">View details</button>`,
-    )
+    const info = document.createElement('div')
+    info.className = 'product-info'
+    const description = document.createElement('div')
+    const category = document.createElement('p')
+    category.className = 'category'
+    category.textContent = product.category
+    const name = document.createElement('h3')
+    name.textContent = product.name
+    description.append(category, name)
+    const price = document.createElement('p')
+    price.className = 'price'
+    price.textContent = currency.format(product.price)
+    info.append(description, price)
+    const add = document.createElement('button')
+    add.className = 'add-to-cart'
+    add.type = 'button'
+    add.dataset.addToCart = String(product.id)
+    add.textContent = 'Add to cart'
+    const details = document.createElement('button')
+    details.className = 'view-details'
+    details.type = 'button'
+    details.dataset.viewDetails = String(product.id)
+    details.textContent = 'View details'
+    card.append(info, add, details)
     return card
   }
 
@@ -218,12 +240,86 @@ export function createUi(actions: UiActions) {
     container: HTMLElement,
     items: Array<CartDetail | Order['items'][number]>,
   ): void {
-    container.innerHTML = items
-      .map((item) => {
+    container.replaceChildren(
+      ...items.map((item) => {
         const product = 'product' in item ? item.product : item
-        return `<div class="checkout-item"><div><h3>${product.name}</h3><p>${item.quantity} × ${currency.format(product.price)}</p></div><strong>${currency.format(product.price * item.quantity)}</strong></div>`
-      })
-      .join('')
+        const row = document.createElement('div')
+        row.className = 'checkout-item'
+        const details = document.createElement('div')
+        const name = document.createElement('h3')
+        name.textContent = product.name
+        const quantity = document.createElement('p')
+        quantity.textContent = `${item.quantity} × ${currency.format(product.price)}`
+        details.append(name, quantity)
+        const total = document.createElement('strong')
+        total.textContent = currency.format(product.price * item.quantity)
+        row.append(details, total)
+        return row
+      }),
+    )
+  }
+
+  function createCartItem(item: CartDetail): HTMLElement {
+    const row = document.createElement('article')
+    row.className = 'cart-item'
+    const details = document.createElement('div')
+    details.className = 'cart-item-details'
+    const name = document.createElement('h3')
+    name.textContent = item.product.name
+    const price = document.createElement('p')
+    price.textContent = `${currency.format(item.product.price)} each`
+    details.append(name, price)
+    const lineTotal = document.createElement('p')
+    lineTotal.className = 'cart-line-total'
+    lineTotal.textContent = currency.format(item.product.price * item.quantity)
+    const controls = document.createElement('div')
+    controls.className = 'quantity-controls'
+    controls.setAttribute('aria-label', `Quantity for ${item.product.name}`)
+    const decrease = document.createElement('button')
+    decrease.type = 'button'
+    decrease.dataset.cartAction = 'decrease'
+    decrease.dataset.productId = String(item.product.id)
+    decrease.setAttribute(
+      'aria-label',
+      `Decrease quantity of ${item.product.name}`,
+    )
+    decrease.textContent = '−'
+    const quantity = document.createElement('span')
+    quantity.setAttribute('aria-live', 'polite')
+    quantity.textContent = String(item.quantity)
+    const increase = document.createElement('button')
+    increase.type = 'button'
+    increase.dataset.cartAction = 'increase'
+    increase.dataset.productId = String(item.product.id)
+    increase.setAttribute(
+      'aria-label',
+      `Increase quantity of ${item.product.name}`,
+    )
+    increase.textContent = '+'
+    controls.append(decrease, quantity, increase)
+    const remove = document.createElement('button')
+    remove.className = 'remove-item'
+    remove.type = 'button'
+    remove.dataset.cartAction = 'remove'
+    remove.dataset.productId = String(item.product.id)
+    remove.textContent = 'Remove'
+    row.append(details, lineTotal, controls, remove)
+    return row
+  }
+
+  function createUnavailableCartItem(item: CartItem): HTMLElement {
+    const row = document.createElement('article')
+    row.className = 'cart-item cart-item-unavailable'
+    const message = document.createElement('p')
+    message.textContent = `Saved product #${item.id} is currently unavailable.`
+    const remove = document.createElement('button')
+    remove.className = 'remove-item'
+    remove.type = 'button'
+    remove.dataset.cartAction = 'remove'
+    remove.dataset.productId = String(item.id)
+    remove.textContent = 'Remove unavailable item'
+    row.append(message, remove)
+    return row
   }
 
   function showCheckout(items: CartDetail[], total: number): void {
@@ -387,6 +483,8 @@ export function createUi(actions: UiActions) {
       loadState,
       visibleProducts: products,
       cart,
+      unavailableCartItems,
+      catalogAvailable,
       view,
       total,
     }: RenderData) {
@@ -446,23 +544,37 @@ export function createUi(actions: UiActions) {
         button.setAttribute('aria-pressed', String(active))
       }
       const items = cart
-      const count = items.reduce((sum, item) => sum + item.quantity, 0)
+      const count = [...items, ...unavailableCartItems].reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      )
       $('#cart-count').textContent = String(count)
       $('#cart-count').hidden = count === 0
       $('#cart-total').textContent = currency.format(total)
-      $('#clear-cart').toggleAttribute('disabled', items.length === 0)
-      $('#proceed-to-checkout').toggleAttribute('disabled', items.length === 0)
-      $('#cart-status').textContent = items.length
-        ? `${count} ${count === 1 ? 'item' : 'items'} in your cart.`
-        : 'Your cart is empty.'
-      $('#cart-items').innerHTML = items.length
-        ? items
-            .map(
-              ({ product, quantity }) =>
-                `<article class="cart-item"><div class="cart-item-details"><h3>${product.name}</h3><p>${currency.format(product.price)} each</p></div><p class="cart-line-total">${currency.format(product.price * quantity)}</p><div class="quantity-controls" aria-label="Quantity for ${product.name}"><button type="button" data-cart-action="decrease" data-product-id="${product.id}" aria-label="Decrease quantity of ${product.name}">−</button><span aria-live="polite">${quantity}</span><button type="button" data-cart-action="increase" data-product-id="${product.id}" aria-label="Increase quantity of ${product.name}">+</button></div><button class="remove-item" type="button" data-cart-action="remove" data-product-id="${product.id}">Remove</button></article>`,
-            )
-            .join('')
-        : '<p class="empty-cart">Your cart is waiting for a good find.</p>'
+      $('#clear-cart').toggleAttribute('disabled', count === 0)
+      $('#proceed-to-checkout').toggleAttribute(
+        'disabled',
+        count === 0 || unavailableCartItems.length > 0,
+      )
+      $('#cart-status').textContent = unavailableCartItems.length
+        ? catalogAvailable
+          ? `${unavailableCartItems.length} saved ${unavailableCartItems.length === 1 ? 'item is' : 'items are'} no longer available. Remove ${unavailableCartItems.length === 1 ? 'it' : 'them'} to checkout.`
+          : 'Your saved cart is safe. Products are currently unavailable, so checkout is disabled.'
+        : items.length
+          ? `${count} ${count === 1 ? 'item' : 'items'} in your cart.`
+          : 'Your cart is empty.'
+      const cartItems = $('#cart-items')
+      if (!count) {
+        const empty = document.createElement('p')
+        empty.className = 'empty-cart'
+        empty.textContent = 'Your cart is waiting for a good find.'
+        cartItems.replaceChildren(empty)
+      } else {
+        cartItems.replaceChildren(
+          ...items.map(createCartItem),
+          ...unavailableCartItems.map(createUnavailableCartItem),
+        )
+      }
     },
     openCart,
     openDetails,

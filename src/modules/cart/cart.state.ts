@@ -84,11 +84,10 @@ export const removeFromCart = (productId: number): boolean =>
   persistCart(cart.filter((item) => item.id !== productId))
 export const clearCart = (): boolean => persistCart([])
 
-export function reconcileCart(catalog: Product[]): boolean {
-  const nextCart = cart.filter((item) =>
-    catalog.some((product) => product.id === item.id),
+export function getUnavailableCartItems(catalog: Product[]): Cart {
+  return cart.filter(
+    (item) => !catalog.some((product) => product.id === item.id),
   )
-  return nextCart.length === cart.length || persistCart(nextCart)
 }
 
 export function saveOrder(order: Order): boolean {
