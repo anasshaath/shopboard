@@ -6,7 +6,7 @@ import {
   getVisibleProducts,
   validateCustomer,
   createOrderId,
-} from './logic.js'
+} from './modules/products/products.logic.ts'
 import {
   changeCart,
   clearCart,
@@ -15,36 +15,38 @@ import {
   removeFromCart,
   saveOrder,
   setView,
-} from './state.js'
-import { createUi } from './ui.js'
+} from './modules/cart/cart.state.ts'
+import { createUi } from './ui.ts'
+import type { Category } from './modules/products/products.types.ts'
+import type { Customer } from './modules/products/products.logic.ts'
 
 let placingOrder = false
 const ui = createUi({
-  addToCart(productId) {
+  addToCart(productId: number) {
     if (changeCart(productId, 1)) {
       render()
       ui.openCart()
     }
   },
-  changeCart(productId, action) {
+  changeCart(productId: number, action: 'increase' | 'decrease' | 'remove') {
     const saved =
       action === 'remove'
         ? removeFromCart(productId)
         : changeCart(productId, action === 'increase' ? 1 : -1)
     if (saved) render()
   },
-  showDetails(productId) {
+  showDetails(productId: number) {
     ui.openDetails(findProduct(productId))
   },
-  search(search) {
+  search(search: string) {
     setView({ search })
     render()
   },
-  filterCategory(category) {
+  filterCategory(category: Category | 'all') {
     setView({ category })
     render()
   },
-  changeView(control) {
+  changeView(control: string) {
     const view = getView()
     if (control === 'show-all')
       setView({
@@ -65,7 +67,7 @@ const ui = createUi({
     const items = getCartDetails(getCart())
     if (items.length) ui.showCheckout(items, getTotal(items))
   },
-  placeOrder(customer) {
+  placeOrder(customer: Customer) {
     if (placingOrder) return
     const errors = validateCustomer(customer)
     if (Object.keys(errors).length) {

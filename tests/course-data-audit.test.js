@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { products } from '../src/products.js'
-import { getVisibleProducts } from '../src/logic.js'
+import { products } from '../src/modules/products/products.ts'
+import { getVisibleProducts } from '../src/modules/products/products.logic.ts'
 
 test('matches the student-created Day 2 exercise dataset', () => {
   const baseView = { category: 'all', under30: false, sortDirection: null }

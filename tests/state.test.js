@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getCartDetails, getTotal } from '../src/logic.js'
+import {
+  getCartDetails,
+  getTotal,
+} from '../src/modules/products/products.logic.ts'
 
 function createStorage(initial = {}) {
   const values = new Map(Object.entries(initial))
@@ -13,7 +16,7 @@ function createStorage(initial = {}) {
 
 async function loadState(storage) {
   globalThis.localStorage = storage
-  return import(`../src/state.js?test=${Math.random()}`)
+  return import(`../src/modules/cart/cart.state.ts?test=${Math.random()}`)
 }
 
 test('updates quantities, totals, and persisted cart data', async () => {

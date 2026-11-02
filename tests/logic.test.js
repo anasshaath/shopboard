@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getVisibleProducts } from '../src/logic.js'
+import { getVisibleProducts } from '../src/modules/products/products.logic.ts'
 
 test('sorts products by price in both directions', () => {
   const ascending = getVisibleProducts({

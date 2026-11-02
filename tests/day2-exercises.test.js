@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { products } from '../src/products.js'
+import { products } from '../src/modules/products/products.ts'
 import {
   arrayWorkout,
   destructuringExercise,

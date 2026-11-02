@@ -1,4 +1,6 @@
-export const products = [
+import type { Product } from './products.types.ts'
+
+export const products: Product[] = [
   {
     id: 1,
     name: 'The Everyday Notebook',
