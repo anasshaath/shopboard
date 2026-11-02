@@ -6,9 +6,13 @@ import type {
 } from './modules/products/products.logic.ts'
 import type {
   Category,
+  LoadState,
   Product,
   ProductView,
 } from './modules/products/products.types.ts'
+import { getProductsRenderModel } from './modules/products/products.ui.ts'
+import { getProductVisual } from './modules/products/products.visuals.ts'
+import { setToastRenderer, type ToastType } from './shared/ui/toast.ts'
 
 interface UiActions {
   addToCart(productId: number): void
@@ -23,25 +27,19 @@ interface UiActions {
   clearCart(): void
   checkout(): void
   placeOrder(customer: Customer): void
+  retryProducts(): void
 }
 
 interface RenderData {
-  products: Product[]
+  loadState: LoadState
+  visibleProducts: Product[]
   cart: CartDetail[]
   view: ProductView
   total: number
 }
 
 function isCategory(value: string): value is Category {
-  return [
-    'Work & Create',
-    'Slow Moments',
-    'At Home',
-    'Bags',
-    'Daily Rituals',
-    'Green Spaces',
-    'Shoes',
-  ].includes(value)
+  return ['Bags', 'Shoes', 'Accessories'].includes(value)
 }
 
 const currency = new Intl.NumberFormat('en-US', {
@@ -76,34 +74,22 @@ export function createUi(actions: UiActions) {
     return element
   }
   const grid = $('#product-grid')
-  const artwork: Record<number, [string, string]> = {
-    1: [
-      'sage',
-      '<span class="tag">DESK ESSENTIAL</span><div class="notebook"><span>NOTES<br>&amp; IDEAS</span></div>',
-    ],
-    2: ['peach', '<div class="mug"></div>'],
-    3: ['lavender', '<div class="lamp"><i></i><b></b></div>'],
-    4: ['butter', '<div class="tote"><span>take<br>it easy.</span></div>'],
-    5: ['rose', '<div class="bottle"><i></i></div>'],
-    6: [
-      'blue',
-      '<span class="tag">A MOMENT OF CALM</span><div class="planter"><i></i><b></b><span></span></div>',
-    ],
-    7: ['sky', '<div class="sneaker"><i></i><b></b></div>'],
-    8: ['oat', '<div class="loafer"><i></i></div>'],
-    9: ['olive', '<div class="runner"><i></i><b></b></div>'],
-    10: ['coral', '<div class="sandal"><i></i><b></b></div>'],
-    11: ['stone', '<div class="tote"><span>market<br>day.</span></div>'],
-    12: ['plum', '<div class="crossbody"><i></i><b></b></div>'],
-  }
+  const catalogStatus = $('#catalog-status')
+  const toasts = $('#toasts')
   const createArtwork = (productId: number): HTMLDivElement => {
-    const artworkData = artwork[productId]
-    if (!artworkData) throw new Error(`Missing artwork: ${productId}`)
-    const [color, markup] = artworkData
+    const visual = getProductVisual(productId)
     const art = document.createElement('div')
-    art.className = `product-art ${color}`
+    art.className = `product-art ${visual.color}`
     art.setAttribute('aria-hidden', 'true')
-    art.innerHTML = markup
+    if (visual.kind === 'css') {
+      art.innerHTML = visual.markup
+    } else {
+      const image = document.createElement('img')
+      image.className = 'product-art-image'
+      image.src = visual.asset
+      image.alt = ''
+      art.append(image)
+    }
     return art
   }
   const cartPanel = $('#shopping-cart')
@@ -122,10 +108,42 @@ export function createUi(actions: UiActions) {
     card.append(createArtwork(product.id))
     card.insertAdjacentHTML(
       'beforeend',
-      `<div class="product-info"><div><p class="category">${product.category}</p><h3>${product.name}</h3></div><p class="price">${currency.format(product.price)}</p></div><p class="description">${product.description}</p><button class="add-to-cart" type="button" data-add-to-cart="${product.id}">Add to cart</button><button class="view-details" type="button" data-view-details="${product.id}">View details</button>`,
+      `<div class="product-info"><div><p class="category">${product.category}</p><h3>${product.name}</h3></div><p class="price">${currency.format(product.price)}</p></div><button class="add-to-cart" type="button" data-add-to-cart="${product.id}">Add to cart</button><button class="view-details" type="button" data-view-details="${product.id}">View details</button>`,
     )
     return card
   }
+
+  function renderCatalogMessage(
+    message: string,
+    retry = false,
+    retryLabel = 'Try again',
+  ): void {
+    const status = document.createElement('p')
+    status.className = 'catalog-message'
+    status.setAttribute('role', retry ? 'alert' : 'status')
+    status.textContent = message
+    if (!retry) {
+      catalogStatus.replaceChildren(status)
+      return
+    }
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'button'
+    button.dataset.retryProducts = 'true'
+    button.textContent = retryLabel
+    catalogStatus.replaceChildren(status, button)
+  }
+
+  function renderToast(message: string, type: ToastType): void {
+    const toast = document.createElement('p')
+    toast.className = `toast toast-${type}`
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status')
+    toast.textContent = message
+    toasts.append(toast)
+    window.setTimeout(() => toast.remove(), 4000)
+  }
+
+  setToastRenderer(renderToast)
 
   function focusTrap(event: KeyboardEvent, modal: HTMLElement): void {
     if (event.key !== 'Tab') return
@@ -187,7 +205,8 @@ export function createUi(actions: UiActions) {
     $('#details-category').textContent = product.category
     $('#details-title').textContent = product.name
     $('#details-price').textContent = currency.format(product.price)
-    $('#details-description').textContent = product.description
+    $('#details-description').textContent = ''
+    $('#details-description').hidden = true
     $('#details-backdrop').hidden = false
     detailsModal.classList.add('is-open')
     detailsModal.setAttribute('aria-hidden', 'false')
@@ -279,6 +298,11 @@ export function createUi(actions: UiActions) {
         actions.showDetails(Number(card.dataset.productId))
     }
   })
+  catalogStatus.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return
+    const retry = event.target.closest('[data-retry-products]')
+    if (retry instanceof HTMLButtonElement) actions.retryProducts()
+  })
   grid.addEventListener('keydown', (event) => {
     if (!(event.target instanceof HTMLElement)) return
     if (
@@ -359,21 +383,54 @@ export function createUi(actions: UiActions) {
   })
 
   return {
-    render({ products, cart, view, total }: RenderData) {
+    render({
+      loadState,
+      visibleProducts: products,
+      cart,
+      view,
+      total,
+    }: RenderData) {
       const categoryFilter = select('category-filter')
-      if (categoryFilter.options.length === 1) {
+      if (
+        loadState.status === 'success' &&
+        categoryFilter.options.length === 1
+      ) {
         for (const category of [
-          ...new Set(products.map((product) => product.category)),
+          ...new Set(loadState.products.map((product) => product.category)),
         ]) {
           categoryFilter.add(new Option(category, category))
         }
       }
       categoryFilter.value = view.category
       input('product-search').value = view.search
-      grid.replaceChildren(...products.map(productCard))
       const summary = $('#product-summary')
       summary.textContent = `${products.length} ${products.length === 1 ? 'product' : 'products'} • Total: ${currency.format(products.reduce((sum, product) => sum + product.price, 0))}`
       $('#no-results').hidden = products.length !== 0
+      const renderModel = getProductsRenderModel(loadState, products)
+      if (renderModel.status === 'products') {
+        catalogStatus.replaceChildren()
+        grid.replaceChildren(...renderModel.products.map(productCard))
+      } else if (renderModel.status === 'loading') {
+        grid.replaceChildren()
+        renderCatalogMessage('Loading products…')
+        summary.textContent = 'Loading products…'
+        $('#no-results').hidden = true
+      } else if (renderModel.status === 'error') {
+        grid.replaceChildren()
+        renderCatalogMessage(renderModel.message, true, renderModel.retryLabel)
+        summary.textContent = ''
+        $('#no-results').hidden = true
+      } else if (renderModel.status === 'empty') {
+        grid.replaceChildren()
+        renderCatalogMessage('No products available.')
+        summary.textContent = 'No products available.'
+        $('#no-results').hidden = true
+      } else {
+        grid.replaceChildren()
+        renderCatalogMessage('No matching products.')
+        summary.textContent = 'No matching products.'
+        $('#no-results').hidden = true
+      }
       for (const button of document.querySelectorAll(
         '.product-controls button',
       )) {

@@ -1,5 +1,4 @@
 import type { Cart, CartDetail } from '../cart/cart.types.ts'
-import { products } from './products.ts'
 import type { Product, ProductView } from './products.types.ts'
 
 export interface Customer {
@@ -13,10 +12,15 @@ export interface Customer {
 
 export type CustomerErrors = Partial<Record<keyof Customer, string>>
 
-export const findProduct = (id: number): Product | undefined =>
-  products.find((product) => product.id === id)
+export const findProduct = (
+  products: Product[],
+  id: number,
+): Product | undefined => products.find((product) => product.id === id)
 
-export function getVisibleProducts(view: ProductView): Product[] {
+export function getVisibleProducts(
+  products: Product[],
+  view: ProductView,
+): Product[] {
   const term = view.search.trim().toLowerCase()
   const visible = products.filter((product) => {
     const matchesSearch = [product.name, product.category].some((value) =>
@@ -36,9 +40,9 @@ export function getVisibleProducts(view: ProductView): Product[] {
   )
 }
 
-export function getCartDetails(cart: Cart): CartDetail[] {
+export function getCartDetails(cart: Cart, products: Product[]): CartDetail[] {
   return cart.flatMap((item) => {
-    const product = findProduct(item.id)
+    const product = findProduct(products, item.id)
     return product ? [{ ...item, product }] : []
   })
 }

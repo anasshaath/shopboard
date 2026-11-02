@@ -1,6 +1,12 @@
-import type { Product } from './products.types.ts'
+interface LocalProduct {
+  id: number
+  name: string
+  price: number
+  category: string
+  description: string
+}
 
-export const products: Product[] = [
+export const products: LocalProduct[] = [
   {
     id: 1,
     name: 'The Everyday Notebook',

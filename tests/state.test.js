@@ -4,6 +4,7 @@ import {
   getCartDetails,
   getTotal,
 } from '../src/modules/products/products.logic.ts'
+import { products } from '../src/modules/products/products.ts'
 
 function createStorage(initial = {}) {
   const values = new Map(Object.entries(initial))
@@ -31,7 +32,7 @@ test('updates quantities, totals, and persisted cart data', async () => {
     { id: 7, quantity: 1 },
   ])
 
-  const items = getCartDetails(state.getCart())
+  const items = getCartDetails(state.getCart(), products)
   assert.equal(
     items.reduce((count, item) => count + item.quantity, 0),
     3,
@@ -64,6 +65,28 @@ test('clears every cart item and persists an empty cart', async () => {
   assert.equal(state.clearCart(), true)
   assert.deepEqual(state.getCart(), [])
   assert.equal(storage.snapshot()['shopboard-cart'], '[]')
+})
+
+test('reconciles stored cart entries that are absent from the API catalog', async () => {
+  const storage = createStorage({
+    'shopboard-cart': '[{"id":11,"quantity":2},{"id":999,"quantity":1}]',
+  })
+  const state = await loadState(storage)
+
+  assert.equal(
+    state.reconcileCart([
+      {
+        id: 11,
+        name: 'Rain Boots',
+        category: 'Shoes',
+        price: 60,
+        inStock: true,
+      },
+    ]),
+    true,
+  )
+  assert.deepEqual(state.getCart(), [{ id: 11, quantity: 2 }])
+  assert.equal(storage.snapshot()['shopboard-cart'], '[{"id":11,"quantity":2}]')
 })
 
 test('decreases a quantity to removal and removes only the chosen product', async () => {

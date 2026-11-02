@@ -12,6 +12,7 @@
     <title>ShopBoard — Good things for everyday living</title>
   </head>
   <body>
+    <div id="toasts" aria-live="polite" aria-atomic="true"></div>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header wrap">
       <a class="brand" href="#" aria-label="ShopBoard home"
@@ -215,6 +216,11 @@
           No products match that search. Try another term or adjust the
           collection filters.
         </p>
+        <div
+          id="catalog-status"
+          class="catalog-status"
+          aria-live="polite"
+        ></div>
         <div class="product-grid" id="product-grid"></div>
         <p class="collection-note">
           An illustrative collection. Products and prices are for this demo.

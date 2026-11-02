@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { getVisibleProducts } from '../src/modules/products/products.logic.ts'
+import { products } from '../src/modules/products/products.ts'
 
 test('sorts products by price in both directions', () => {
-  const ascending = getVisibleProducts({
+  const ascending = getVisibleProducts(products, {
     search: '',
     category: 'all',
     under30: false,
     sortDirection: 'asc',
   })
-  const descending = getVisibleProducts({
+  const descending = getVisibleProducts(products, {
     search: '',
     category: 'all',
     under30: false,
@@ -27,7 +28,7 @@ test('sorts products by price in both directions', () => {
 })
 
 test('restores the original catalog order when sorting is cleared', () => {
-  const productsInDefaultOrder = getVisibleProducts({
+  const productsInDefaultOrder = getVisibleProducts(products, {
     search: '',
     category: 'all',
     under30: false,
@@ -41,7 +42,7 @@ test('restores the original catalog order when sorting is cleared', () => {
 })
 
 test('combines search, category filtering, and price sorting', () => {
-  const results = getVisibleProducts({
+  const results = getVisibleProducts(products, {
     search: 'bag',
     category: 'Bags',
     under30: false,

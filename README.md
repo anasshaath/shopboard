@@ -122,6 +122,18 @@ be checked without making a commit:
 git hook run pre-commit
 ```
 
+## API variants for manual testing
+
+The normal catalog request remains `https://shopboard-api.vercel.app/api/products`.
+To manually test the real API's alternate responses, temporarily use one variant
+in the browser's request flow, then restore the normal endpoint:
+
+- Delayed response: `/delay/3000/api/products`
+- HTTP failure: `/fail/500/api/products`
+- Empty catalog: `/empty/api/products`
+
+These are live API paths, not locally simulated UI states.
+
 ## Day 2 homework material
 
 The project includes dynamic rendering, search/filter/sort composition,

@@ -1,5 +1,4 @@
-import { products } from '../products/products.ts'
-import type { ProductView } from '../products/products.types.ts'
+import type { Product, ProductView } from '../products/products.types.ts'
 import type { Cart, CartItem } from './cart.types.ts'
 
 const cartKey = 'shopboard-cart'
@@ -35,13 +34,7 @@ function isCartItem(value: unknown): value is CartItem {
 function loadCart(): Cart {
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(cartKey) ?? '[]')
-    return Array.isArray(saved)
-      ? saved.filter(
-          (item): item is CartItem =>
-            isCartItem(item) &&
-            products.some((product) => product.id === item.id),
-        )
-      : []
+    return Array.isArray(saved) ? saved.filter(isCartItem) : []
   } catch {
     return []
   }
@@ -90,6 +83,13 @@ export function changeCart(productId: number, adjustment: number): boolean {
 export const removeFromCart = (productId: number): boolean =>
   persistCart(cart.filter((item) => item.id !== productId))
 export const clearCart = (): boolean => persistCart([])
+
+export function reconcileCart(catalog: Product[]): boolean {
+  const nextCart = cart.filter((item) =>
+    catalog.some((product) => product.id === item.id),
+  )
+  return nextCart.length === cart.length || persistCart(nextCart)
+}
 
 export function saveOrder(order: Order): boolean {
   try {

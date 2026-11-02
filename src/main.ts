@@ -13,19 +13,30 @@ import {
   getCart,
   getView,
   removeFromCart,
+  reconcileCart,
   saveOrder,
   setView,
 } from './modules/cart/cart.state.ts'
 import { createUi } from './ui.ts'
 import type { Category } from './modules/products/products.types.ts'
 import type { Customer } from './modules/products/products.logic.ts'
+import { getProducts } from './modules/products/products.api.ts'
+import type { Product } from './modules/products/products.types.ts'
+import { showToast } from './shared/ui/toast.ts'
+import type { LoadState } from './modules/products/products.types.ts'
+import { createProductsLoader } from './modules/products/products.loader.ts'
 
 let placingOrder = false
+let catalog: Product[] = []
+let loadState: LoadState = { status: 'loading' }
 const ui = createUi({
   addToCart(productId: number) {
     if (changeCart(productId, 1)) {
       render()
       ui.openCart()
+      showToast('Added to cart.', 'success')
+    } else {
+      showToast('We could not save this cart update.', 'error')
     }
   },
   changeCart(productId: number, action: 'increase' | 'decrease' | 'remove') {
@@ -36,7 +47,7 @@ const ui = createUi({
     if (saved) render()
   },
   showDetails(productId: number) {
-    ui.openDetails(findProduct(productId))
+    ui.openDetails(findProduct(catalog, productId))
   },
   search(search: string) {
     setView({ search })
@@ -64,7 +75,7 @@ const ui = createUi({
     if (clearCart()) render()
   },
   checkout() {
-    const items = getCartDetails(getCart())
+    const items = getCartDetails(getCart(), catalog)
     if (items.length) ui.showCheckout(items, getTotal(items))
   },
   placeOrder(customer: Customer) {
@@ -77,7 +88,7 @@ const ui = createUi({
       )
       return
     }
-    const items = getCartDetails(getCart())
+    const items = getCartDetails(getCart(), catalog)
     if (!items.length) {
       ui.showErrors(
         {},
@@ -111,16 +122,38 @@ const ui = createUi({
     ui.confirm(order, cartCleared)
     placingOrder = false
   },
+  retryProducts() {
+    void productsLoader.load()
+  },
 })
 
 function render() {
-  const cart = getCartDetails(getCart())
+  const cart = getCartDetails(getCart(), catalog)
+  const visibleProducts =
+    loadState.status === 'success'
+      ? getVisibleProducts(loadState.products, getView())
+      : []
   ui.render({
-    products: getVisibleProducts(getView()),
+    loadState,
+    visibleProducts,
     cart,
     view: getView(),
     total: getTotal(cart),
   })
 }
 
-render()
+const productsLoader = createProductsLoader(getProducts, {
+  onStateChange(nextLoadState) {
+    loadState = nextLoadState
+    if (nextLoadState.status === 'success') {
+      catalog = nextLoadState.products
+      reconcileCart(catalog)
+    }
+    render()
+  },
+  onError(message) {
+    showToast(message, 'error')
+  },
+})
+
+void productsLoader.load()

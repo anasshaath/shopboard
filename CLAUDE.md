@@ -30,3 +30,5 @@ Vite (Vanilla JavaScript), HTML, CSS
 6. Never sort the canonical `products` array in place; Default must restore its original order.
 7. Use delegated product-grid events so repeated filtering never creates duplicate listeners.
 8. Persist only cart IDs and quantities in localStorage; derive product details and totals from `products.js`.
+9. Route all HTTP requests through the shared API client; check HTTP status before decoding `unknown` JSON with an endpoint-specific runtime decoder and mapper.
+10. Never render API-derived strings with `innerHTML` or hide DOM lookups with non-null assertions; narrow elements and use `createElement` with `textContent`.

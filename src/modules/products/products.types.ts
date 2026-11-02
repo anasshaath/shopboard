@@ -1,18 +1,11 @@
-export type Category =
-  | 'Work & Create'
-  | 'Slow Moments'
-  | 'At Home'
-  | 'Bags'
-  | 'Daily Rituals'
-  | 'Green Spaces'
-  | 'Shoes'
+export type Category = 'Bags' | 'Shoes' | 'Accessories'
 
 export interface Product {
   id: number
   name: string
   price: number
   category: Category
-  description: string
+  inStock: boolean
 }
 
 export interface ProductView {
@@ -21,3 +14,8 @@ export interface ProductView {
   under30: boolean
   sortDirection: 'asc' | 'desc' | null
 }
+
+export type LoadState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'success'; products: Product[] }
