@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { getVisibleProducts } from '../src/modules/products/products.logic.ts'
-import { products } from '../src/modules/products/products.ts'
+import { testProducts } from './fixtures/products.js'
 
 test('sorts products by price in both directions', () => {
-  const ascending = getVisibleProducts(products, {
+  const ascending = getVisibleProducts(testProducts, {
     search: '',
     category: 'all',
     under30: false,
     sortDirection: 'asc',
   })
-  const descending = getVisibleProducts(products, {
+  const descending = getVisibleProducts(testProducts, {
     search: '',
     category: 'all',
     under30: false,
@@ -19,16 +19,16 @@ test('sorts products by price in both directions', () => {
 
   assert.deepEqual(
     ascending.map((product) => product.price),
-    [18, 22, 24, 28, 32, 52, 65, 90, 100, 147, 149, 150],
+    [24, 28, 52, 147, 149],
   )
   assert.deepEqual(
     descending.map((product) => product.price),
-    [150, 149, 147, 100, 90, 65, 52, 32, 28, 24, 22, 18],
+    [149, 147, 52, 28, 24],
   )
 })
 
 test('restores the original catalog order when sorting is cleared', () => {
-  const productsInDefaultOrder = getVisibleProducts(products, {
+  const productsInDefaultOrder = getVisibleProducts(testProducts, {
     search: '',
     category: 'all',
     under30: false,
@@ -37,12 +37,12 @@ test('restores the original catalog order when sorting is cleared', () => {
 
   assert.deepEqual(
     productsInDefaultOrder.map((product) => product.id),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    [2, 4, 11, 12, 7],
   )
 })
 
 test('combines search, category filtering, and price sorting', () => {
-  const results = getVisibleProducts(products, {
+  const results = getVisibleProducts(testProducts, {
     search: 'bag',
     category: 'Bags',
     under30: false,
@@ -51,6 +51,6 @@ test('combines search, category filtering, and price sorting', () => {
 
   assert.deepEqual(
     results.map((product) => product.id),
-    [12, 11, 4],
+    [11, 4],
   )
 })

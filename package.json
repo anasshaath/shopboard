@@ -15,7 +15,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.js": [
+    "*.{ts,js,cjs}": [
       "eslint --fix",
       "prettier --write"
     ]
@@ -27,7 +27,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "3.9.10",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
     "vite": "^8.3.5"
   }
 }

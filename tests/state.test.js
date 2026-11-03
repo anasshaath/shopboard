@@ -5,7 +5,7 @@ import {
   getTotal,
 } from '../src/modules/products/products.logic.ts'
 import { createProductsLoader } from '../src/modules/products/products.loader.ts'
-import { products } from '../src/modules/products/products.ts'
+import { testProducts } from './fixtures/products.js'
 
 function createStorage(initial = {}) {
   const values = new Map(Object.entries(initial))
@@ -33,7 +33,7 @@ test('updates quantities, totals, and persisted cart data', async () => {
     { id: 7, quantity: 1 },
   ])
 
-  const items = getCartDetails(state.getCart(), products)
+  const items = getCartDetails(state.getCart(), testProducts)
   assert.equal(
     items.reduce((count, item) => count + item.quantity, 0),
     3,

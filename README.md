@@ -1,148 +1,104 @@
 # ShopBoard
 
-ShopBoard is a responsive demo storefront built for the Day 2 JavaScript and
-DOM assignment. It renders a student-created product catalog dynamically and
-keeps catalog browsing, cart behavior, and a local demo checkout in the
-browser.
+ShopBoard is a responsive, TypeScript demo storefront. It loads its catalog
+from the ShopBoard API, supports browsing and cart interactions in the
+browser, and saves demo cart and order data in `localStorage`.
 
 ## Features
 
-- Dynamic product cards from a single catalog data source
-- Case-insensitive product and category search
-- Category filtering, an Under $30 filter, and ascending/descending price
-  sorting; clearing sorting restores the original catalog order
-- Slide-out cart with a live quantity badge, quantity controls, removal, Clear
-  Cart, line totals, and cart total
-- Cart persistence in `localStorage`
-- Accessible product-details modal, cart panel, and checkout flow with keyboard
-  handling and focus management
-- Local-only demo checkout with validation, a generated demo order ID, and an
-  order confirmation saved to `localStorage`
-- Responsive green-and-cream ShopBoard interface and SVG favicon
+- Typed product API client with runtime decoding, HTTP status handling, and
+  mapping from API fields to the app's `Product` type.
+- Loading, error with retry, empty-catalog, no-match, and product-list states.
+- Search, category filtering, Under $30 filtering, and price sorting.
+- Persistent cart quantities, unavailable-item handling, demo checkout, and
+  accessible toast notifications.
+- Keyboard-accessible cart and product-detail dialogs, focus handling, and
+  live status messages.
 
-## Technology and development tools
+## Stack
 
-- Vite
-- Vanilla JavaScript, HTML, and CSS
+- Vite, TypeScript, HTML, and CSS
 - Node's built-in test runner
-- ESLint and Prettier
-- Husky and lint-staged for pre-commit checks
+- ESLint with type-aware checks for application TypeScript, Prettier, Husky,
+  and lint-staged
 
-## Run locally
+## Setup and scripts
 
-Requirements: a current Node.js version and npm.
+Use a current Node.js version and npm.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local address printed by Vite. To create a production build:
+Vite prints the local URL. Other scripts are defined in `package.json`:
 
 ```bash
 npm run build
 npm run preview
-```
-
-## Project structure
-
-```text
-.
-├── index.html                 # Page structure and accessible controls
-├── public/                    # Static assets, including the favicon
-├── src/
-│   ├── products.js            # Canonical product catalog
-│   ├── data.js                # Compatibility re-export for Day 2 exercises
-│   ├── logic.js               # Pure catalog, cart, validation, and ID logic
-│   ├── state.js               # Mutable state and localStorage persistence
-│   ├── ui.js                  # DOM rendering, event listeners, focus behavior
-│   ├── main.js                # Application composition and event actions
-│   └── style.css              # Responsive styles
-├── tests/                     # Node test-runner coverage
-├── examples/day2/             # Isolated classroom examples and notes
-└── .husky/pre-commit          # Staged-file checks and tests
-```
-
-The Day 2 architecture uses five application responsibilities:
-
-1. `data.js` represents the assignment's data module and re-exports the
-   catalog.
-2. `logic.js` contains browser-independent business rules.
-3. `state.js` owns mutable cart state and `localStorage` access.
-4. `ui.js` is the only module that queries or changes the DOM.
-5. `main.js` composes the modules and connects UI actions to state and logic.
-
-`products.js` is the single source of truth for the catalog; `data.js` remains
-as a small compatibility bridge for the earlier Day 2 examples.
-
-## Store behavior
-
-Search matches product names and categories without case sensitivity. Search,
-category filtering, the Under $30 filter, and price sorting can be combined in
-any order. Both price directions are available, while the Default control
-clears the active view controls and restores the catalog's declared order.
-
-The cart stores product IDs and quantities in `localStorage`; product details
-and totals are derived from the catalog on each render. Customers can adjust a
-quantity, remove an item, or clear the cart. Cart contents survive a refresh
-when browser storage is available.
-
-Checkout is explicitly **DEMO ONLY**. It validates contact and shipping fields,
-saves a demo order locally, and clears the cart only after the order saves
-successfully. It does not collect payment details, process payments, or send
-customer data to a server.
-
-## Quality checks
-
-```bash
-npm test
-npm run build
+npm run typecheck
 npm run lint
 npm run format:check
-```
-
-To apply Prettier formatting:
-
-```bash
-npm run format
-```
-
-Husky installs its hook through npm's `prepare` script. Before a commit,
-`.husky/pre-commit` runs:
-
-```bash
-npx lint-staged
 npm test
 ```
 
-lint-staged runs ESLint and Prettier on staged JavaScript files. The hook can
-be checked without making a commit:
+`npm run lint` checks TypeScript application code plus JavaScript and CommonJS
+test files. `npm test` runs the Node test suite. The browser regression files in `tests/`
+are optional local checks: they require a running Vite server, Playwright, and
+Chrome at the Windows path configured inside those files. They are not part of
+the `npm test` script.
 
-```bash
-git hook run pre-commit
+## API
+
+The normal catalog request is:
+
+```text
+https://shopboard-api.vercel.app/api/products
 ```
 
-## API variants for manual testing
+Only `src/shared/api/client.ts` calls `fetch`. The products module validates
+the response and maps `title`, `category_name`, `price_cents`, and `in_stock`
+to the app's `Product` shape.
 
-The normal catalog request remains `https://shopboard-api.vercel.app/api/products`.
-To manually test the real API's alternate responses, temporarily use one variant
-in the browser's request flow, then restore the normal endpoint:
+For manual API-state testing, use these live variants temporarily and then
+restore the normal endpoint:
 
 - Delayed response: `/delay/3000/api/products`
 - HTTP failure: `/fail/500/api/products`
 - Empty catalog: `/empty/api/products`
 
-These are live API paths, not locally simulated UI states.
+## Project structure
 
-## Day 2 homework material
+```text
+src/
+  main.ts                       # Composes product loading, state, and UI actions
+  ui.ts                         # DOM rendering, listeners, dialogs, and focus
+  style.css                     # Responsive storefront styles
+  modules/
+    products/
+      products.types.ts         # Product, category, view, and load-state types
+      products.api.ts           # API response validation and product mapping
+      products.loader.ts        # Request lifecycle and retry state changes
+      products.logic.ts         # Catalog, cart-detail, and checkout helpers
+      products.ui.ts            # Pure catalog render-model selection
+      products.visuals.ts       # Local artwork metadata keyed by product ID
+    cart/
+      cart.types.ts             # CartItem, Cart, and CartDetail types
+      cart.state.ts             # Cart/view state and localStorage persistence
+  shared/
+    api/client.ts               # BASE_URL, ApiError, and fetchJson
+    ui/toast.ts                 # Shared toast API
+public/                         # Favicon and local product-art assets
+tests/                          # Node and optional browser regression tests
+  fixtures/                     # Shared catalog fixtures for Node tests
+```
 
-The project includes dynamic rendering, search/filter/sort composition,
-delegated product-card events, cart persistence, modular JavaScript, and
-focused automated tests used for the Day 2 assignment. The student-created
-catalog and exercise boundaries are documented in the project materials below:
+## Behavior notes
 
-- [Architecture and coding rules](AGENTS.MD)
-- [Detailed architecture rules](CLAUDE.md)
-- [Actual debugging findings and verification evidence](debugging-log.md)
-- [Day 2 slide coverage checklist](DAY2-CHECKLIST.md)
-- [Classroom-only exercises and DevTools notes](examples/day2/)
+The cart stores only product IDs and quantities. A failed or empty catalog
+does not erase saved cart entries; checkout stays disabled until a usable
+catalog returns. A product absent from a successful non-empty catalog is
+shown as unavailable and can be removed explicitly.
+
+Checkout is demo-only: no payment is collected and no order is sent to a
+server. Successful demo orders are stored locally in the browser.

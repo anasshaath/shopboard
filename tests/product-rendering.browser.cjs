@@ -28,18 +28,32 @@ async function main() {
             price_cents: 8900,
             in_stock: true,
           },
+          {
+            id: 2,
+            title: 'Unavailable sample',
+            category_name: 'Shoes',
+            price_cents: 6400,
+            in_stock: false,
+          },
         ],
-        total: 1,
+        total: 2,
       }),
     }),
   )
 
   try {
     await page.goto(appUrl, { waitUntil: 'networkidle' })
-    await page.locator('.product h3').waitFor()
+    await page.locator('.product h3').first().waitFor()
     assert.equal(await page.locator('[data-malicious-product]').count(), 0)
-    assert.equal(await page.locator('.product h3').textContent(), maliciousName)
+    assert.equal(
+      await page.locator('.product h3').first().textContent(),
+      maliciousName,
+    )
     assert.equal(await page.evaluate(() => window.productNameScriptRan), false)
+    assert.equal(
+      await page.locator('[data-add-to-cart="2"]').isDisabled(),
+      true,
+    )
 
     await page.locator('[data-add-to-cart="1"]').click()
     await page.locator('#cart-toggle').click()

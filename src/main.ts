@@ -31,6 +31,11 @@ let catalog: Product[] = []
 let loadState: LoadState = { status: 'loading' }
 const ui = createUi({
   addToCart(productId: number) {
+    const product = findProduct(catalog, productId)
+    if (!product?.inStock) {
+      showToast('This product is currently out of stock.', 'info')
+      return
+    }
     if (changeCart(productId, 1)) {
       render()
       ui.openCart()

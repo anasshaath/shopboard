@@ -125,7 +125,8 @@ export function createUi(actions: UiActions) {
     add.className = 'add-to-cart'
     add.type = 'button'
     add.dataset.addToCart = String(product.id)
-    add.textContent = 'Add to cart'
+    add.disabled = !product.inStock
+    add.textContent = product.inStock ? 'Add to cart' : 'Out of stock'
     const details = document.createElement('button')
     details.className = 'view-details'
     details.type = 'button'
@@ -229,6 +230,9 @@ export function createUi(actions: UiActions) {
     $('#details-price').textContent = currency.format(product.price)
     $('#details-description').textContent = ''
     $('#details-description').hidden = true
+    const detailsAdd = $('#details-add-to-cart')
+    detailsAdd.toggleAttribute('disabled', !product.inStock)
+    detailsAdd.textContent = product.inStock ? 'Add to cart' : 'Out of stock'
     $('#details-backdrop').hidden = false
     detailsModal.classList.add('is-open')
     detailsModal.setAttribute('aria-hidden', 'false')
@@ -426,7 +430,7 @@ export function createUi(actions: UiActions) {
   $('#cart-close').addEventListener('click', closeCart)
   $('#continue-shopping').addEventListener('click', closeCart)
   $('#cart-backdrop').addEventListener('click', closeCart)
-  $('#clear-cart').addEventListener('click', actions.clearCart)
+  $('#clear-cart').addEventListener('click', () => actions.clearCart())
   $('#cart-items').addEventListener('click', (event) => {
     if (!(event.target instanceof Element)) return
     const button = event.target.closest('[data-cart-action]')
@@ -443,7 +447,7 @@ export function createUi(actions: UiActions) {
     closeDetails()
     if (detailsProduct) actions.addToCart(detailsProduct.id)
   })
-  $('#proceed-to-checkout').addEventListener('click', actions.checkout)
+  $('#proceed-to-checkout').addEventListener('click', () => actions.checkout())
   $('#back-to-cart').addEventListener('click', () => showStorefront(true))
   $('#continue-browsing').addEventListener('click', () => {
     form('checkout-form').reset()
