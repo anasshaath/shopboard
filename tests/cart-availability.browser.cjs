@@ -109,6 +109,9 @@ async function main() {
         ),
         '[{"id":1,"quantity":1}]',
       )
+      await failureScenario.page
+        .getByRole('button', { name: 'Close cart' })
+        .click()
       failThenSucceed = false
       await failureScenario.page
         .getByRole('button', { name: 'Try again' })

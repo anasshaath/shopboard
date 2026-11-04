@@ -56,7 +56,6 @@ async function main() {
     )
 
     await page.locator('[data-add-to-cart="1"]').click()
-    await page.locator('#cart-toggle').click()
     assert.equal(await page.locator('[data-malicious-product]').count(), 0)
     assert.equal(
       await page.locator('#cart-items h3').textContent(),
